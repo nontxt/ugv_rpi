@@ -141,13 +141,16 @@ sudo apt update
 sudo apt upgrade -y
 sudo apt install -y libopenblas-dev libatlas3-base libcamera-dev python3-opencv portaudio19-dev
 sudo apt install -y util-linux procps hostapd iproute2 iw haveged dnsmasq iptables espeak
-sudo apt install -y python3-poetry
+sudo add-apt-repository ppa:deadsnakes/ppa
+sudo apt update
+sudo apt install python3.11
+sudo apt install -y python3.11-poetry
 
 echo "# Create a Python virtual environment."
 # Create a Python virtual environment
 cd $PWD
 #python -m venv --system-site-packages ugv-env
-python -m poetry env use python3.11
+python3.11 -m poetry env
 source $(poetry env info --path)/bin/activate
 
 echo "# Activate a Python virtual environment."

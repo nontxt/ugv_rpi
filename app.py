@@ -5,13 +5,15 @@ import yaml, os
 
 # raspberry pi version check.
 def is_raspberry_pi5():
-    with open('/proc/cpuinfo', 'r') as file:
-        for line in file:
-            if 'Model' in line:
-                if 'Raspberry Pi 5' in line:
-                    return True
-                else:
-                    return False
+    try:
+        with open('/proc/cpuinfo', 'r') as file:
+            for line in file:
+                if 'Model' in line:
+                    return 'Raspberry Pi 5' in line
+
+    except FileNotFoundError:
+        print("Could not open /proc/cpuinfo to determine Raspberry Pi version.")
+        return False
 
 if is_raspberry_pi5():
     base = BaseController('/dev/ttyAMA0', 115200)

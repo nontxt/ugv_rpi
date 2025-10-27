@@ -31,7 +31,7 @@ else
     echo "Second cron job added successfully."
 fi
 
-source $PWD/ugv-env/bin/activate && jupyter notebook --generate-config
+source $(poetry env info --path)/bin/activate && jupyter notebook --generate-config
 CONFIG_FILE=/home/$(logname)/.jupyter/jupyter_notebook_config.py
 if [ -f "$CONFIG_FILE" ]; then
     echo "c.NotebookApp.token = ''" >> $CONFIG_FILE

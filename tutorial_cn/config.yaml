@@ -61,8 +61,8 @@ code:
   cv_clor: 10305
   cv_hand: 10306
   cv_auto: 10307
-  mp_face: 10308
-  mp_pose: 10309
+#  mp_face: 10308
+#  mp_pose: 10309
 
   re_none: 10401
   re_capt: 10402

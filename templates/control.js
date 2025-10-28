@@ -5,8 +5,8 @@ var max_res, mid_res, min_res;
 var zoom_x1, zoom_x2, zoom_x4;
 var pic_cap, vid_sta, vid_end;
 var mc_lock, mc_unlo;
-var cv_none, cv_moti, cv_face, cv_objs, cv_clor, mp_hand, cv_auto;
-var mp_face, mp_pose;
+var cv_none, cv_moti, cv_face, cv_objs, cv_clor, cv_auto;
+//var mp_face, mp_pose, mp_hand;
 var re_none, re_capt, re_reco, led_off, led_aut, led_ton, base_of, base_on;
 var head_ct, base_ct;
 var s_panid, release, set_mid, s_tilid;
@@ -64,10 +64,10 @@ fetch('/config')
       cv_face = yamlObject.code.cv_face;
       cv_objs = yamlObject.code.cv_objs;
       cv_clor = yamlObject.code.cv_clor;
-      mp_hand = yamlObject.code.mp_hand;
+//      mp_hand = yamlObject.code.mp_hand;
       cv_auto = yamlObject.code.cv_auto;
-      mp_face = yamlObject.code.mp_face;
-      mp_pose = yamlObject.code.mp_pose;
+//      mp_face = yamlObject.code.mp_face;
+//      mp_pose = yamlObject.code.mp_pose;
 
       re_none = yamlObject.code.re_none;
       re_capt = yamlObject.code.re_capt;
@@ -616,9 +616,9 @@ socket.on('update', function(data) {
         var FButtons = advFBtn.getElementsByTagName("button");
         removeButtonsClass(FButtons);
 
-        var mpBtn = document.getElementById("mp_funcs_btn");
-        var MPButtons = mpBtn.getElementsByTagName("button");
-        removeButtonsClass(MPButtons);
+//        var mpBtn = document.getElementById("mp_funcs_btn");
+//        var MPButtons = mpBtn.getElementsByTagName("button");
+//        removeButtonsClass(MPButtons);
 
         var dtIco = document.getElementById("DT");
         var dTypeBtn = document.getElementById("d_type_btn");
@@ -640,12 +640,12 @@ socket.on('update', function(data) {
             FButtons[0].classList.add("ctl_btn_active");
         } else if (data[detect_type] == cv_clor) {
             FButtons[1].classList.add("ctl_btn_active");
-        } else if (data[detect_type] == mp_hand) {
-            FButtons[2].classList.add("ctl_btn_active");
-        } else if (data[detect_type] == mp_face) {
-            MPButtons[0].classList.add("ctl_btn_active");
-        } else if (data[detect_type] == mp_pose) {
-            MPButtons[1].classList.add("ctl_btn_active");
+//        } else if (data[detect_type] == mp_hand) {
+//            FButtons[2].classList.add("ctl_btn_active");
+//        } else if (data[detect_type] == mp_face) {
+//            MPButtons[0].classList.add("ctl_btn_active");
+//        } else if (data[detect_type] == mp_pose) {
+//            MPButtons[1].classList.add("ctl_btn_active");
         }
 
         if (data[detect_type] == cv_auto && cv_heartbeat_stop_flag == false) {

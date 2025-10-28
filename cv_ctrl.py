@@ -1,6 +1,5 @@
 import cv2
 import imutils
-import mediapipe as mp
 import imageio
 import threading
 import datetime, time
@@ -94,16 +93,6 @@ class OpencvFuncs():
                             "dog", "horse", "motorbike", "person", "pottedplant", "sheep",
                             "sofa", "train", "tvmonitor"]
 
-        # mediapipe
-        self.mpDraw = mp.solutions.drawing_utils
-
-        # mediapipe detect hand
-        self.mpHands = mp.solutions.hands
-        self.hands = self.mpHands.Hands(max_num_hands=1)
-        self.max_distance = 1
-        self.gs_pic_interval = 6
-        self.gs_pic_last_time = time.time()
-
         # findline autodrive
         self.sampling_line_1 = 0.6
         self.sampling_line_2 = 0.9
@@ -114,18 +103,6 @@ class OpencvFuncs():
         self.slope_on_speed = 0.1
         self.line_lower = np.array([25, 150, 70])
         self.line_upper = np.array([42, 255, 255])
-
-        # mediapipe detect faces
-        self.mp_face_detection = mp.solutions.face_detection
-        self.face_detection = self.mp_face_detection.FaceDetection(model_selection=0, min_detection_confidence=0.5)
-
-        # mediapipe detect pose
-        self.mp_pose = mp.solutions.pose
-        self.pose = self.mp_pose.Pose(static_image_mode=False, 
-                                    model_complexity=1, 
-                                    smooth_landmarks=True, 
-                                    min_detection_confidence=0.5, 
-                                    min_tracking_confidence=0.5)
 
         # base data
         self.show_base_info_flag = False
@@ -654,96 +631,6 @@ class OpencvFuncs():
             return 0
         return (value - original_min) / (original_max - original_min) * (new_max - new_min) + new_min
 
-    def mp_detect_hand(self, img):
-        height, width = img.shape[:2]
-        center_x, center_y = width // 2, height // 2
-
-        imgRGB = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        results = self.hands.process(imgRGB)
-
-        overlay_buffer = np.zeros_like(imgRGB)
-        get_pwm = 0
-
-        if results.multi_hand_landmarks:
-            for handLms in results.multi_hand_landmarks:
-                # draw joints
-                for id, lm in enumerate(handLms.landmark):
-                    h, w, c = imgRGB.shape
-                    cx, cy = int(lm.x * w), int(lm.y * h)
-                    cv2.circle(overlay_buffer, (cx, cy), 5, (255, 0, 0), -1)
-
-                # draw lines
-                self.mpDraw.draw_landmarks(overlay_buffer, handLms, self.mpHands.HAND_CONNECTIONS)
-
-                target_pos = handLms.landmark[self.mpHands.HandLandmark.INDEX_FINGER_TIP]
-                # print(f"x:{target_pos.x} y:{target_pos.y}")
-                if not self.cv_movtion_lock:
-                    distance = self.gimbal_track(center_x, center_y, width*target_pos.x, height*target_pos.y, self.track_faces_iterate)
-
-                # check hand gs
-                pinky_finger_gs = self.calculate_angle(
-                                            handLms.landmark[self.mpHands.HandLandmark.WRIST],
-                                            handLms.landmark[self.mpHands.HandLandmark.PINKY_MCP],
-                                            handLms.landmark[self.mpHands.HandLandmark.PINKY_MCP],
-                                            handLms.landmark[self.mpHands.HandLandmark.PINKY_TIP])
-
-                index_finger_gs = self.calculate_angle(
-                                            handLms.landmark[self.mpHands.HandLandmark.INDEX_FINGER_MCP],
-                                            handLms.landmark[self.mpHands.HandLandmark.INDEX_FINGER_PIP],
-                                            handLms.landmark[self.mpHands.HandLandmark.INDEX_FINGER_PIP],
-                                            handLms.landmark[self.mpHands.HandLandmark.INDEX_FINGER_TIP])
-
-                middle_finger_gs = self.calculate_angle(
-                                            handLms.landmark[self.mpHands.HandLandmark.MIDDLE_FINGER_MCP],
-                                            handLms.landmark[self.mpHands.HandLandmark.MIDDLE_FINGER_PIP],
-                                            handLms.landmark[self.mpHands.HandLandmark.MIDDLE_FINGER_PIP],
-                                            handLms.landmark[self.mpHands.HandLandmark.MIDDLE_FINGER_TIP])
-
-                # LED Ctrl
-                if middle_finger_gs > 20 and pinky_finger_gs > 90:
-                    cv2.putText(overlay_buffer, ' GS: LED Ctrl', (center_x+50, center_y+100), 
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 128, 128), 1)
-                    tips_distance = self.calculate_distance(handLms.landmark[self.mpHands.HandLandmark.INDEX_FINGER_TIP],
-                        handLms.landmark[self.mpHands.HandLandmark.THUMB_TIP])
-
-                    if index_finger_gs < 3:
-                        self.max_distance = tips_distance
-                    # print(index_finger_gs)
-
-                    get_pwm = int(self.map_value(tips_distance, 0.01, self.max_distance, 0, 128))
-                    self.base_ctrl.lights_ctrl(get_pwm, get_pwm)
-
-                    # try:
-                    #     print(f"dis:{tips_distance} max:{self.max_distance} pwm:{get_pwm}")
-                    # except Exception as e:
-                    #     print(e)
-
-                # Take Pic
-                elif middle_finger_gs < 10 and pinky_finger_gs > 90 and index_finger_gs < 10:
-                    cv2.putText(overlay_buffer, ' GS: Take Pic', (center_x+50, center_y+100), 
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 128, 128), 1)
-                    if time.time() - self.gs_pic_last_time > self.gs_pic_interval:
-                        self.base_ctrl.lights_ctrl(255, 255)
-                        time.sleep(0.01)
-                        self.picture_capture()
-                        self.base_ctrl.lights_ctrl(0, 0)
-                        self.gs_pic_last_time = time.time()
-
-                # Not Found
-                else:
-                    cv2.putText(overlay_buffer, ' GS: Not Defined', (center_x+50, center_y+100), 
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 128, 128), 1)
-                    self.base_ctrl.lights_ctrl(0, 0)
-
-        cv2.putText(overlay_buffer, 'ITERATE: {}'.format(self.track_faces_iterate), (center_x+50, center_y+140), 
-            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
-        cv2.putText(overlay_buffer, ' SPD_R: {}'.format(self.track_spd_rate), (center_x+50, center_y+160), 
-            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
-        cv2.putText(overlay_buffer, ' ACC_R: {}'.format(self.track_acc_rate), (center_x+50, center_y+180), 
-            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
-
-        self.overlay = overlay_buffer
-
     def cv_auto_drive(self, img):
         hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 
@@ -856,29 +743,6 @@ class OpencvFuncs():
 
         self.overlay = overlay_buffer
 
-    def mediaPipe_faces(self, img):
-        image = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        results = self.face_detection.process(image)
-
-        overlay_buffer = np.zeros_like(image)
-        cv2.putText(overlay_buffer, 'MediaPipe Faces', (100, 70), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1)
-        if results.detections:
-            for detection in results.detections:
-                self.mpDraw.draw_detection(overlay_buffer, detection)
-        self.overlay = overlay_buffer
-
-    def mediaPipe_pose(self, img):
-        image = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        results = self.pose.process(image)
-
-        overlay_buffer = np.zeros_like(image)
-        cv2.putText(overlay_buffer, 'MediaPipe Pose', (100, 70), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1)
-        if results.pose_landmarks:
-            self.mpDraw.draw_landmarks(overlay_buffer, results.pose_landmarks, self.mp_pose.POSE_CONNECTIONS)
-        self.overlay = overlay_buffer
-
-
-
     def info_update(self, megs, color, size):
         if megs == -1:
             self.info_update_time = time.time()
@@ -925,19 +789,16 @@ class OpencvFuncs():
         except Exception as e:
             print(f"[cv_ctrl.update_base_data] error: {e}")
 
-
-
-
     def cv_process(self, frame):
         cv_mode_list = {
             f['code']['cv_moti']: self.cv_detect_movition,
             f['code']['cv_face']: self.cv_detect_faces,
             f['code']['cv_objs']: self.cv_detect_objects,
             f['code']['cv_clor']: self.cv_detect_color,
-            f['code']['mp_hand']: self.mp_detect_hand,
+            # f['code']['mp_hand']: self.mp_detect_hand,
             f['code']['cv_auto']: self.cv_auto_drive,
-            f['code']['mp_face']: self.mediaPipe_faces,
-            f['code']['mp_pose']: self.mediaPipe_pose
+            # f['code']['mp_face']: self.mediaPipe_faces,
+            # f['code']['mp_pose']: self.mediaPipe_pose
         }
         try:
             cv_mode_list[self.cv_mode](frame)
@@ -974,9 +835,6 @@ class OpencvFuncs():
             self.tilt_angle = 0
         else:
             self.cv_movtion_lock = True
-
-
-
 
     def change_target_color(self, lc, uc):
         self.color_lower = np.array([lc[0], lc[1], lc[2]])

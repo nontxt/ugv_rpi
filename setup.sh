@@ -141,15 +141,19 @@ sudo apt update
 sudo apt upgrade -y
 sudo apt install -y libopenblas-dev libatlas3-base libcamera-dev python3-opencv portaudio19-dev
 sudo apt install -y util-linux procps hostapd iproute2 iw haveged dnsmasq iptables espeak
+sudo apt install pipx -y
+sudo pipx ensurepath --global --force
+pipx install poetry==2.1.1
+source ~/.bashrc
 
 echo "# Create a Python virtual environment."
 # Create a Python virtual environment
 cd $PWD
 #python -m venv --system-site-packages ugv-env
-python3 -m pip install poetry==2.1.1
-source $(python3 -m poetry env info --path)/bin/activate
+poetry env use python
 
 echo "# Activate a Python virtual environment."
+source $(poetry env info --path)/bin/activate
 
 echo "# Install dependencies from requirements.txt"
 # Install dependencies from requirements.txt

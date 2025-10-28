@@ -141,28 +141,21 @@ sudo apt update
 sudo apt upgrade -y
 sudo apt install -y libopenblas-dev libatlas3-base libcamera-dev python3-opencv portaudio19-dev
 sudo apt install -y util-linux procps hostapd iproute2 iw haveged dnsmasq iptables espeak
-sudo apt install pipx -y
-sudo pipx ensurepath --global --force
-pipx install poetry==2.1.1
-source ~/.bashrc
 
 echo "# Create a Python virtual environment."
 # Create a Python virtual environment
 cd $PWD
-#python -m venv --system-site-packages ugv-env
-poetry env use python
+python -m venv --system-site-packages ugv-env
 
 echo "# Activate a Python virtual environment."
-source $(poetry env info --path)/bin/activate
 
 echo "# Install dependencies from requirements.txt"
 # Install dependencies from requirements.txt
-python -m poetry install
-#if $use_index; then
-#  sudo -H -u $USER bash -c 'source $PWD/ugv-env/bin/activate && pip install -i https://pypi.tuna.tsinghua.edu.cn/simple -r requirements.txt && deactivate'
-#else
-#  sudo -H -u $USER bash -c 'source $PWD/ugv-env/bin/activate && pip install -r requirements.txt && deactivate'
-#fi
+if $use_index; then
+  sudo -H -u $USER bash -c 'source $PWD/ugv-env/bin/activate && pip install -i https://pypi.tuna.tsinghua.edu.cn/simple -r requirements.txt && deactivate'
+else
+  sudo -H -u $USER bash -c 'source $PWD/ugv-env/bin/activate && pip install -r requirements.txt && deactivate'
+fi
 
 echo "# Add current user to group so it can use serial."
 sudo usermod -aG dialout $USER
